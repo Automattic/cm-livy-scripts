@@ -1,0 +1,174 @@
+{
+  "name": "LIVY",
+  "label": "Livy",
+  "description": "The livy spark server",
+  "version": "1.0",
+  "compatibility" : { "cdhVersion" : { "min" : "5.5.0" } },
+  "runAs": {
+    "user": "hue",
+    "group": "hue"
+  },
+  "parcel": {
+    "requiredTags": [
+      "livy",
+      "spark"
+    ],
+    "optionalTags": [
+      "livy-plugin"
+    ]
+  },
+  "serviceDependencies": [
+    {
+      "name": "YARN",
+      "required": "true"
+    }
+  ],
+  "rolesWithExternalLinks" : ["LIVY_SERVER"],
+  "roles": [
+    {
+      "name": "LIVY_SERVER",
+      "label": "Livy Server",
+      "pluralLabel": "Livy Servers",
+      "jvmBased": true,
+      "topology": {
+        "minInstances": "1",
+        "maxInstances": "1"
+      },
+
+      "logging" : {
+        "dir": "/var/log/livy",
+        "filename": "livy.log",
+        "modifiable": true,
+        "configName": "log.dir",
+        "loggingType": "logback",
+        "additionalConfigs": [
+          {
+            "key": "extraLoggerConfig",
+            "value": "<logger name=\"org.apache.commons.beanutils\" level=\"ERROR\"/>"
+          }
+        ]
+      },
+      "externalLink" : {
+        "name" : "livyserver_operational_menu",
+        "label" : "Livy Server﻿Operational Menu",
+        "url" : "http://${host}:${livy.server.port}"
+      },
+      "parameters": [
+        {
+          "name": "livy.keystore",
+          "label": "livy.keystore",
+          "description": "Use this keystore for the SSL certificate and key.",
+          "required": "false",
+          "type": "string"
+        },
+        {
+          "name": "livy.keystore.password",
+          "label": "Livy keystore password",
+          "description": "Specify the keystore password.",
+          "required": "false",
+          "type": "password"
+        },
+        {
+          "name": "livy.environment",
+          "label": "livy.environment",
+          "description": "Specifies Livy's environment. In development mode, Livy will enable debugging options, such as reporting possible routes on a 404.",
+          "required": "true",
+          "type": "string_enum",
+          "validValues": [
+            "production",
+            "development"
+          ],
+          "default": "development"
+        },
+        {
+          "name": "livy.server.host",
+          "label": "Livy server host",
+          "description": "What host address to start the server on. Defaults to 0.0.0.0. If using the `yarn` factory mode, this address must be accessible from the YARN nodes.",
+          "required": "true",
+          "type": "string",
+          "default": "0.0.0.0"
+        },
+        {
+          "name": "livy.server.port",
+          "label": "Livy server port",
+          "description": "Livy server port",
+          "required": "true",
+          "type": "port",
+          "default": "8998"
+        },
+        {
+          "name": "livy.server.session.factory",
+          "label": "Livy server session factory",
+          "description": "What session factory to use.",
+          "required": "true",
+          "type": "string_enum",
+          "validValues": [
+            "process",
+            "yarn"
+          ],
+          "default": "yarn"
+        },
+        {
+          "name": "livy.server.spark-submit",
+          "label": "Livy server spark-submit",
+          "description": "What spark-submit executable path to use to submit spark applications.",
+          "required": "true",
+          "type": "string",
+          "default": "spark-submit"
+        },
+        {
+          "name": "livy.server.session.timeout",
+          "label": "Livy server session timeout",
+          "description": "Time in milliseconds on how long Livy will wait before timing out an idle session.",
+          "required": "true",
+          "type": "long",
+          "default": 3600000
+        },
+        {
+          "name": "livy.yarn.jar",
+          "label": "livy yarn jar",
+          "description": "Location to find the livy assembly. If not specified, livy will determine the assembly from the local jarfile. If using `yarn` sessions, this may be on HDFS.",
+          "required": "false",
+          "type": "string"
+        },
+        {
+          "name": "livy.impersonation.enabled",
+          "label": "Livy impersonation enabled",
+          "description": "If livy should use proxy users when submitting a job.",
+          "required": "true",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "name": "livy.files.dir",
+          "label": "Livy files directory",
+          "description": "Allow spark to reference files found in this directory. This may either be a local directory or an hdfs:// directory. Be careful setting this option, as it may allow users to access any file the Livy process can access, such as Livy's SSL certificate.",
+          "required": "false",
+          "type": "string"
+        }
+      ],
+      "configWriter": {
+        "generators": [
+          {
+            "filename": "livy-conf/livy-defaults.conf",
+            "configFormat": "properties",
+            "excludedParams": ["livy.keystore", "livy.keystore.password"]
+          }
+        ],
+        "auxConfigGenerators": [
+          {
+            "filename": "livy-conf/spark-user-configurable-options.conf",
+            "sourceFilename": "aux/spark-user-configurable-options.conf"
+          }
+        ]
+      },
+
+      "startRunner": {
+        "program": "scripts/control.sh",
+        "args": [
+          "start"
+        ]
+      }
+    }
+  ]
+}
