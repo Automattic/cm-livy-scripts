@@ -3,3 +3,4 @@ hue
 manifest.json
 LIVY*.parcel
 LIVY*.jar
+livy
