@@ -19,7 +19,7 @@ cd ./livy
 
 git checkout v0.2.0
 
-mvn -DskipTests -Dspark.version=1.6.0-cdh5.8.0 -Dhadoop-version=2.6.0-cdh5.8.0 clean package
+mvn -DskipTests -Dspark.version=1.6.0-cdh5.9.0 -Dhadoop-version=2.6.0-cdh5.9.0 clean package
 
 # Prepare parcel
 cd ../
