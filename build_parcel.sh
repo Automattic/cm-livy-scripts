@@ -12,29 +12,24 @@ set -ex
 PARCEL_DIR=LIVY-$1
 PARCEL=$PARCEL_DIR-$2.parcel
 
-# Build Livy
-[ ! -d ./livy ] && git clone https://github.com/cloudera/livy.git
+LIVY_DOWNLOAD_LINK=http://www-us.apache.org/dist/incubator/livy/0.4.0-incubating/livy-0.4.0-incubating-bin.zip
 
-cd ./livy
+# Download Livy
+[ -d ./downloads ] && rm -rf ./downloads
 
-git checkout v0.2.0
+mkdir ./downloads && cd ./downloads
 
-mvn -DskipTests -Dspark.version=1.6.0-cdh5.9.0 -Dhadoop-version=2.6.0-cdh5.9.0 clean package
+wget  $LIVY_DOWNLOAD_LINK -O livy.zip && unzip livy.zip
 
-# Prepare parcel
 cd ../
 
-[ ! -d ./$PARCEL_DIR ] && rm -rf ./$PARCEL_DIR
+[ -d ./$PARCEL_DIR ] && rm -rf ./$PARCEL_DIR
 
-mkdir -p ./$PARCEL_DIR/jars
-mkdir -p ./$PARCEL_DIR/repl-jars
-mkdir -p ./$PARCEL_DIR/rsc-jars
+mkdir ./$PARCEL_DIR
 
-cp -r ./livy/bin ./$PARCEL_DIR/
-cp -r ./livy/conf ./$PARCEL_DIR/
-cp ./livy/server/target/jars/*.jar ./$PARCEL_DIR/jars/
-cp ./livy/repl/target/jars/*.jar ./$PARCEL_DIR/repl-jars/
-cp ./livy/rsc/target/jars/*.jar ./$PARCEL_DIR/rsc-jars/
+
+cp -R ./downloads/livy-0.4.0-incubating-bin/* ./$PARCEL_DIR/
+rm -rf ./$PARCEL_DIR/conf
 
 cp -r parcel-src/meta $PARCEL_DIR/
 

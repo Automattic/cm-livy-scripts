@@ -9,7 +9,9 @@ fi
 
 set -ex
 
-JARNAME=LIVY-$1.jar
+JARNAME=LIVY2-$1.jar
+
+rm -rf $JARNAME
 
 # validate service description
 java -jar ~/github/cloudera/cm_ext/validator/target/validator.jar -s ./csd-src/descriptor/service.sdl

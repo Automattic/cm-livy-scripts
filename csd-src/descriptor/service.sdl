@@ -1,6 +1,6 @@
 {
-  "name": "LIVY",
-  "label": "Livy",
+  "name": "LIVY2",
+  "label": "Livy2",
   "description": "The livy spark server",
   "version": "1.0",
   "compatibility" : { "cdhVersion" : { "min" : "5.5.0" } },
@@ -34,25 +34,18 @@
         "minInstances": "1",
         "maxInstances": "1"
       },
-
-      "logging" : {
-        "dir": "/var/log/livy",
-        "filename": "livy.log",
-        "modifiable": true,
-        "configName": "log.dir",
-        "loggingType": "logback",
-        "additionalConfigs": [
-          {
-            "key": "extraLoggerConfig",
-            "value": "<logger name=\"org.apache.commons.beanutils\" level=\"ERROR\"/>"
-          }
-        ]
-      },
       "externalLink" : {
         "name" : "livyserver_operational_menu",
         "label" : "Livy Server﻿Operational Menu",
         "url" : "http://${host}:${livy.server.port}"
       },
+      "logging" : {
+          "dir" : "/var/log/livy",
+          "filename" : "livy.log",
+          "modifiable" : true,
+          "configName" : "log.dir",
+          "loggingType" : "log4j"
+        },
       "parameters": [
         {
           "name": "livy.keystore",
@@ -69,16 +62,11 @@
           "type": "password"
         },
         {
-          "name": "livy.environment",
-          "label": "livy.environment",
-          "description": "Specifies Livy's environment. In development mode, Livy will enable debugging options, such as reporting possible routes on a 404.",
-          "required": "true",
-          "type": "string_enum",
-          "validValues": [
-            "production",
-            "development"
-          ],
-          "default": "development"
+          "name": "livy.key-password",
+          "label": "Livy key password",
+          "description": "Specify the key password.",
+          "required": "false",
+          "type": "password"
         },
         {
           "name": "livy.server.host",
@@ -97,39 +85,54 @@
           "default": "8998"
         },
         {
-          "name": "livy.server.session.factory",
-          "label": "Livy server session factory",
-          "description": "What session factory to use.",
+          "name": "livy.spark.master",
+          "label": "Spark Master",
+          "description": "Spark master Livy sessions should use",
           "required": "true",
-          "type": "string_enum",
-          "validValues": [
-            "process",
-            "yarn"
-          ],
+          "type": "string",
           "default": "yarn"
         },
         {
-          "name": "livy.server.spark-submit",
-          "label": "Livy server spark-submit",
-          "description": "What spark-submit executable path to use to submit spark applications.",
+          "name": "livy.spark.deploy-mode",
+          "label": "Spark Deploy Mode",
+          "description": "Spark deploy mode Livy sessions should use",
           "required": "true",
           "type": "string",
-          "default": "spark-submit"
+          "default": "cluster"
+        },
+        {
+          "name": "livy.ui.enabled",
+          "label": "Enable UI",
+          "description": "Enable UI.",
+          "required": "false",
+          "type": "boolean",
+          "default": true
         },
         {
           "name": "livy.server.session.timeout",
-          "label": "Livy server session timeout",
+          "label": "Livy session timeout",
           "description": "Time in milliseconds on how long Livy will wait before timing out an idle session.",
           "required": "true",
           "type": "long",
+          "unit": "milliseconds",
           "default": 3600000
         },
         {
-          "name": "livy.yarn.jar",
-          "label": "livy yarn jar",
-          "description": "Location to find the livy assembly. If not specified, livy will determine the assembly from the local jarfile. If using `yarn` sessions, this may be on HDFS.",
-          "required": "false",
-          "type": "string"
+          "name": "livy.server.session.timeout-check",
+          "label": "Livy session timeout check",
+          "description": "Enable to check whether timeout Livy sessions should be stopped.",
+          "required": "true",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "name": "livy.server.session.state-retain.sec",
+          "label": "Livy session retention time",
+          "description": "How long a finished session state should be kept in LivyServer for query.",
+          "required": "true",
+          "type": "long",
+          "unit": "milliseconds",
+          "default": 3600000
         },
         {
           "name": "livy.impersonation.enabled",
@@ -140,25 +143,204 @@
           "default": true
         },
         {
-          "name": "livy.files.dir",
-          "label": "Livy files directory",
-          "description": "Allow spark to reference files found in this directory. This may either be a local directory or an hdfs:// directory. Be careful setting this option, as it may allow users to access any file the Livy process can access, such as Livy's SSL certificate.",
+          "name": "livy.server.request-header.size",
+          "label": "Request header size",
+          "description": "Livy server http request header size.",
           "required": "false",
-          "type": "string"
+          "type": "long",
+          "unit": "bytes",
+          "default": 131072
+        },
+        {
+          "name": "livy.server.response-header.size",
+          "label": "Response header size",
+          "description": "Livy server http response header size.",
+          "required": "false",
+          "type": "long",
+          "unit": "bytes",
+          "default": 131072
+        },
+        {
+          "name": "livy.cache-log.size",
+          "label": "Session/Batch log size",
+          "description": "Logs size livy can cache for each session/batch. 0 means don't cache the logs.",
+          "required": "false",
+          "type": "long",
+          "default": 200,
+          "unit": "lines"
+        },
+        {
+          "name": "livy.rsc.jars",
+          "label": "Livy RSC jars",
+          "required": "false",
+          "type": "string",
+          "description": "Comma-separated list of Livy RSC jars. By default Livy will upload jars from its installation directory every time a session is started. By caching these files in HDFS, for example, startup time of sessions on YARN can be reduced."
+        },
+        {
+          "name": "livy.repl.jars",
+          "label": "Comma-separated list of Livy REPL jars",
+          "required": "false",
+          "type": "string",
+          "description": "Comma-separated list of Livy REPL jars. By default Livy will upload jars from its installation directory every time a session is started. By caching these files in HDFS, for example, startup time of sessions on YARN can be reduced. Please list all the repl dependencies including livy-repl_2.10 and livy-repl_2.11 jars, Livy will automatically pick the right dependencies in session creation."
+        },
+        {
+          "name": "livy.pyspark.archives",
+          "label": "Location of PySpark archives",
+          "required": "false",
+          "type": "string",
+          "description": "Location of PySpark archives. By default Livy will upload the file from SPARK_HOME, but by caching the file in HDFS, startup time of PySpark sessions on YARN can be reduced."
+        },
+        {
+          "name": "livy.sparkr.package",
+          "label": "Location of the SparkR package",
+          "required": "false",
+          "type": "string",
+          "description": "Location of the SparkR package. By default Livy will upload the file from SPARK_HOME, but by caching the file in HDFS, startup time of R sessions on YARN can be reduced."
+        },
+        {
+          "name": "livy.file.local-dir-whitelist",
+          "label": "Local directories whitelist",
+          "required": "false",
+          "type": "string",
+          "description": "List of local directories from where files are allowed to be added to user sessions. By default it's empty, meaning users can only reference remote URIs when starting their sessions."
+        },
+        {
+          "name": "livy.server.csrf_protection.enabled",
+          "label": "CSRF protection",
+          "required": "false",
+          "type": "boolean",
+          "description": "Whether to enable csrf protection, by default it is false. If it is enabled, client should add http-header \"X-Requested-By\" in request if the http method is POST/DELETE/PUT/PATCH."
+        },
+        {
+          "name": "livy.repl.enableHiveContext",
+          "label": "Enable HiveContext in livy interpreter",
+          "required": "false",
+          "type": "boolean",
+          "description": "Whether to enable HiveContext in livy interpreter, if it is true hive-site.xml will be detected on user request and then livy server classpath automatically."
+        },
+        {
+          "name": "livy.server.recovery.mode",
+          "label": "Recovery Mode",
+          "required": "false",
+          "type": "string_enum",
+          "validValues": ["off", "recovery"],
+          "default": "off",
+          "description": "Recovery mode of Livy. Possible values: \noff: Default. Turn off recovery. Every time Livy shuts down, it stops and forgets all sessions. \nrecovery: Livy persists session info to the state store. When Livy restarts, it recovers previous sessions from the state store.\nMust set livy.server.recovery.state-store and livy.server.recovery.state-store.url to configure the state store."
+        },
+        {
+          "name": "livy.server.recovery.state-store",
+          "label": "Recovery State Store",
+          "required": "false",
+          "type": "string_enum",
+          "validValues": ["", "filesystem", "zookeeper"],
+          "description": "Where Livy should store state to for recovery. Possible values:\n<empty>: Default. State store disabled.\nfilesystem: Store state on a file system.\nzookeeper: Store state in a Zookeeper instance."
+        },
+        {
+          "name": "livy.server.recovery.state-store.url",
+          "label": "Recovery State Store URL",
+          "required": "false",
+          "type": "string",
+          "description": "For filesystem state store, the path of the state store directory. Please don't use a filesystem that doesn't support atomic rename (e.g. S3). e.g. file:///tmp/livy or hdfs:///. For zookeeper, the address to the Zookeeper servers. e.g. host1:port1,host2:port2"
+        },
+
+        {
+          "name": "livy.server.yarn.app-lookup-timeout",
+          "label": "YARN app lookout timeout",
+          "required": "false",
+          "type": "long",
+          "description": "If Livy can't find the yarn app within this time, consider it lost.",
+          "unit": "milliseconds",
+          "default": 60000
+        },
+        {
+          "name": "livy.server.yarn.app-leakage.check_timeout",
+          "label": "YARN app leakage check timeout",
+          "required": "false",
+          "type": "long",
+          "description": "When the cluster is busy, we may fail to launch yarn app in app-lookup-timeout, then it would cause session leakage, so we need to check session leakage. How long to check livy session leakage",
+          "unit": "milliseconds",
+          "default": 600000
+        },
+        {
+          "name": "livy.server.yarn.app-leakage.check_interval",
+          "label": "YARN app leakage check interval",
+          "required": "false",
+          "type": "long",
+          "description": "How often to check livy session leakage.",
+          "unit": "milliseconds",
+          "default": 60000
+        },
+        {
+          "name": "livy.server.yarn.poll-interval",
+          "label": "YARN poll interval",
+          "required": "false",
+          "type": "long",
+          "description": "How often Livy polls YARN to refresh YARN app state.",
+          "unit": "milliseconds",
+          "default": 2000
+        },
+        {
+          "name": "livy.server.request-log-retain.days",
+          "label": "Retain access logs for",
+          "required": "false",
+          "type": "long",
+          "description": "Days keep Livy server request logs.",
+          "default": 5
+        },
+
+        {
+          "name": "livy.server.access-control.enabled",
+          "label": "Enable Access Control",
+          "required": "false",
+          "type": "boolean",
+          "description": "Whether to enable Livy server access control, if it is true then all the income requests will be checked if the requested user has permission.",
+          "default": false
+        },
+        {
+          "name": "livy.server.access-control.allowed-users",
+          "label": "Allowed users",
+          "required": "false",
+          "type": "string",
+          "description": "Allowed users to access Livy, by default any user is allowed to access Livy. If user want to limit who could access Livy, user should list all the permitted users with comma separated..",
+          "default": "*"
+        },
+        {
+          "name": "livy.server.access-control.modify-users",
+          "label": "Users with modify permissions",
+          "required": "false",
+          "type": "string",
+          "description": "A list of users with comma separated has the permission to change other user's submitted session, like submitting statements, deleting session.",
+          "default": ""
+        },
+        {
+          "name": "livy.server.access-control.view-users",
+          "label": "Users with view permissions",
+          "required": "false",
+          "type": "string",
+          "description": "A list of users with comma separated has the permission to view other user's infomation, like submitted session state, statement results.",
+          "default": ""
         }
       ],
       "configWriter": {
         "generators": [
           {
-            "filename": "livy-conf/livy-defaults.conf",
+            "filename": "livy.conf",
             "configFormat": "properties",
-            "excludedParams": ["livy.keystore", "livy.keystore.password"]
+            "excludedParams": ["livy.keystore", "livy.keystore.password", "livy.key-password"]
           }
         ],
         "auxConfigGenerators": [
           {
-            "filename": "livy-conf/spark-user-configurable-options.conf",
-            "sourceFilename": "aux/spark-user-configurable-options.conf"
+            "filename": "spark-blacklist.conf",
+            "sourceFilename": "aux/spark-blacklist.conf"
+          },
+          {
+            "filename": "livy-client.conf",
+            "sourceFilename": "aux/livy-client.conf"
+          },
+          {
+            "filename": "livy-env.sh",
+            "sourceFilename": "aux/livy-env.sh"
           }
         ]
       },
@@ -167,7 +349,10 @@
         "program": "scripts/control.sh",
         "args": [
           "start"
-        ]
+        ],
+        "environmentVariables" : {
+          "LIVY_LOG_DIR" : "${log_dir}"
+        }
       }
     }
   ]
